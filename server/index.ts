@@ -96,7 +96,7 @@ io.on('connection', (socket) => {
     const room: Room = {
       id: roomId,
       players: [{ id: socket.id, username }],
-      maxPlayers: 4,
+      maxPlayers: 3,
       gameStarted: false,
       answersSubmitted: 0
     };
