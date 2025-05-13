@@ -1,26 +1,18 @@
 import { useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
+
+import TipTopJoinRoom from './TipTopJoinRoom';
+import TipTopWaitRoom from './TipTopWaitRoom';
+
 import './TipTop.css';
+import { DragDropProvider } from '@dnd-kit/react';
+import Droppable from '../../components/Droppable';
+import Draggable from '../../components/Draggable';
 
-interface Room {
-  id: string;
-  playersCount: number;
-  maxPlayers: number;
-}
-
-interface Player {
-  id: string;
-  username: string;
-  number?: number;
-  answer?: string;
-  isCaptain?: boolean;
-}
-
-interface GameAnswer {
-  username: string;
-  answer: string;
-}
+import type { Room, Player, GameAnswer } from './TipTopTypes'
+import TipTopResult from './TipTopResult';
+import TipTopPlay from './TipTopPlay';
 
 function TipTop() {
   const [socket, setSocket] = useState<typeof Socket | null>(null);
@@ -28,7 +20,6 @@ function TipTop() {
   const [currentRoom, setCurrentRoom] = useState<string | null>(null);
   const [currentPlayers, setCurrentPlayers] = useState<Player[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [username, setUsername] = useState<string>('');
   const [gameStarted, setGameStarted] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<string>('');
   const [playerAnswer, setPlayerAnswer] = useState<string>('');
@@ -106,22 +97,6 @@ function TipTop() {
     }
   }, [socket]);
 
-  const createRoom = () => {
-    if (socket && username.trim()) {
-      socket.emit('createRoom', { username });
-    } else {
-      setError('Введите имя пользователя');
-    }
-  };
-
-  const joinRoom = (roomId: string) => {
-    if (socket && username.trim()) {
-      socket.emit('joinRoom', { roomId, username });
-    } else {
-      setError('Введите имя пользователя');
-    }
-  };
-
   const submitAnswer = () => {
     if (socket && playerAnswer.trim()) {
       setPlayerAnswerSubmit(true)
@@ -133,10 +108,6 @@ function TipTop() {
     if (socket && answerOrder.length === allAnswers.length) {
       socket.emit('submitOrder', { order: answerOrder });
     }
-  };
-
-  const handleDragStart = (username: string) => {
-    setAnswerOrder(prev => [...prev, username]);
   };
 
   const resetGame = () => {
@@ -154,82 +125,36 @@ function TipTop() {
     <div className="tiptop">
       <h1>TipTop Game</h1>
 
+
+
       {error && <div className="error">{error}</div>}
 
       {!currentRoom ? (
-        <div className="room-management">
-          <div className="username-input">
-            <input
-              type="text"
-              placeholder="Введите ваше имя"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="username-field"
-            />
-          </div>
-
-          <button onClick={createRoom} className="create-room-btn">
-            Создать комнату
-          </button>
-
-          <div className="rooms-list">
-            <h2>Доступные комнаты:</h2>
-            {rooms.length === 0 ? (
-              <p>Нет доступных комнат</p>
-            ) : (
-              rooms.map((room) => (
-                <div key={room.id} className="room-item">
-                  <span>Комната: {room.id}</span>
-                  <span>Игроки: {room.playersCount}/{room.maxPlayers}</span>
-                  <button onClick={() => joinRoom(room.id)}>
-                    Присоединиться
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        <TipTopJoinRoom
+          socket={socket}
+          rooms={rooms}
+          setError={setError}
+        />
       ) : !gameStarted ? (
-        <div className="game-room">
-          <h2>Вы в комнате: {currentRoom}</h2>
-          <p>Ожидание игроков {currentPlayers.length}/3</p>
-          <p>Игроки в комнате: {currentPlayers.map(player => player.username).join(', ')}</p>
-        </div>
+        <TipTopWaitRoom
+          currentRoom={currentRoom}
+          currentPlayers={currentPlayers}
+        />
       ) : isCaptain ? (
         <div className="game-room">
           <h2>Вы капитан!</h2>
           <p>Вопрос: {currentQuestion}</p>
           {allAnswers.length > 0 ? (
             <div className="captain-view">
-              <h3>Ответы игроков:</h3>
-              <div className="answers-list">
-                {allAnswers.map((answer, index) => (
-                  <div
-                    key={index}
-                    className="answer-item"
-                    draggable
-                    onDragStart={() => handleDragStart(answer.username)}
-                  >
-                    <p>Игрок: {answer.username}</p>
-                    <p>Ответ: {answer.answer}</p>
-                  </div>
-                ))}
-              </div>
-              {answerOrder.length === allAnswers.length && (
-                <button onClick={submitOrder} className="submit-order-btn">
-                  Подтвердить порядок
-                </button>
-              )}
+              <TipTopPlay
+                allAnswers={allAnswers}
+                submitOrder={submitOrder}
+              />
               {gameResult && (
-                <div className="game-result">
-                  <h3>Результат:</h3>
-                  <p>{gameResult.isCorrect ? 'Правильно!' : 'Неправильно!'}</p>
-                  <p>Правильный порядок: {gameResult.correctOrder.join(' → ')}</p>
-                  <p>Ваш порядок: {gameResult.submittedOrder.join(' → ')}</p>
-                  <button onClick={resetGame} className="new-game-btn">
-                    Новая игра
-                  </button>
-                </div>
+                <TipTopResult
+                  gameResult={gameResult}
+                  resetGame={resetGame}
+                />
               )}
             </div>
           ) : (
@@ -259,15 +184,10 @@ function TipTop() {
             )}
           </div>
           {gameResult && (
-            <div className="game-result">
-              <h3>Результат:</h3>
-              <p>{gameResult.isCorrect ? 'Капитан угадал!' : 'Капитан не угадал!'}</p>
-              <p>Правильный порядок: {gameResult.correctOrder.join(' → ')}</p>
-              <p>Порядок капитана: {gameResult.submittedOrder.join(' → ')}</p>
-              <button onClick={resetGame} className="new-game-btn">
-                Новая игра
-              </button>
-            </div>
+            <TipTopResult
+              gameResult={gameResult}
+              resetGame={resetGame}
+            />
           )}
         </div>
       )}
