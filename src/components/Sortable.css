@@ -1,0 +1,7 @@
+.draggable-card {
+  background-color: #333;
+  padding: 15px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: move;
+}
