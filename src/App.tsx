@@ -1,8 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
+
+
 import './App.css'
+
 import Home from './pages/Home'
 import CardDetail from './pages/CardDetail'
 import TipTop from './pages/games/TipTop'
+
 function About() {
   return (
     <div>
@@ -11,6 +15,7 @@ function About() {
     </div>
   )
 }
+
 
 function App() {
   return (
@@ -23,7 +28,6 @@ function App() {
             </li>
           </ul>
         </nav>
-
         <main>
           <Routes>
             <Route path="/" element={<Home />} />
